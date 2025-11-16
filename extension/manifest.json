@@ -1,0 +1,13 @@
+{
+  "display_name": "Dual Tavern Bridge",
+  "loading_order": 15,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Your Name",
+  "version": "1.0.0",
+  "homePage": "https://github.com/yourusername/dual-tavern-bridge",
+  "auto_update": false,
+  "minimum_client_version": "1.12.0"
+}
