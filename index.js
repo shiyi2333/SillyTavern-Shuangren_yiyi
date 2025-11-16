@@ -18,6 +18,32 @@ const defaultSettings = {
   rolePlayMode: false
 };
 
+// ===== 调试辅助函数 =====
+function debugLog(category, message, data = null) {
+  const timestamp = new Date().toLocaleTimeString();
+  const prefix = `[DTB ${timestamp}] [${category}]`;
+  
+  if (data) {
+    console.log(prefix, message, data);
+  } else {
+    console.log(prefix, message);
+  }
+}
+
+// 监控 WebSocket 状态
+function getWebSocketStatus() {
+  if (!ws) return 'NULL';
+  
+  const states = {
+    0: 'CONNECTING',
+    1: 'OPEN',
+    2: 'CLOSING',
+    3: 'CLOSED'
+  };
+  
+  return states[ws.readyState] || 'UNKNOWN';
+}
+
 // ===== 设置管理 =====
 function loadSettings() {
   const context = SillyTavern.getContext();
@@ -38,37 +64,62 @@ function saveSettings() {
 function connectToServer() {
   const settings = loadSettings();
   
+  debugLog('CONNECT', '开始连接到服务器', { url: settings.serverUrl });
+  
   if (ws && ws.readyState === WebSocket.OPEN) {
     toastr.info('已连接到服务器', 'Dual Tavern Bridge');
     return;
   }
 
-  ws = new WebSocket(settings.serverUrl);
-
-  ws.onopen = () => {
-    console.log('✅ 连接到中转服务器');
-    toastr.success('已连接到中转服务器', 'Dual Tavern Bridge');
-    updateConnectionStatus(true);
-  };
-
-  ws.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    handleServerMessage(message);
-  };
-
-  ws.onerror = (error) => {
-    console.error('WebSocket 错误:', error);
-    toastr.error('服务器连接错误', 'Dual Tavern Bridge');
-  };
-
-  ws.onclose = () => {
-    console.log('❌ 与服务器断开连接');
-    updateConnectionStatus(false);
+  // 清理旧连接
+  if (ws) {
+    debugLog('CONNECT', '清理旧连接');
+    ws.close();
     ws = null;
-    partnerCharacter = null;
-    updatePartnerCharacterDisplay();
-  };
+  }
+
+  try {
+    ws = new WebSocket(settings.serverUrl);
+    debugLog('CONNECT', 'WebSocket 对象已创建');
+
+    ws.onopen = () => {
+      debugLog('CONNECT', '✅ 连接成功');
+      console.log('✅ 连接到中转服务器');
+      toastr.success('已连接到中转服务器', 'Dual Tavern Bridge');
+      updateConnectionStatus(true);
+    };
+
+    ws.onmessage = (event) => {
+      debugLog('MESSAGE', '收到服务器消息', event.data);
+      try {
+        const message = JSON.parse(event.data);
+        handleServerMessage(message);
+      } catch (error) {
+        console.error('消息解析错误:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      debugLog('ERROR', 'WebSocket 错误', error);
+      console.error('WebSocket 错误:', error);
+      toastr.error('服务器连接错误', 'Dual Tavern Bridge');
+    };
+
+    ws.onclose = (event) => {
+      debugLog('CLOSE', '连接关闭', { code: event.code, reason: event.reason });
+      console.log('❌ 与服务器断开连接');
+      updateConnectionStatus(false);
+      ws = null;
+      partnerCharacter = null;
+      updatePartnerCharacterDisplay();
+    };
+  } catch (error) {
+    debugLog('ERROR', '创建 WebSocket 失败', error);
+    console.error('创建 WebSocket 失败:', error);
+    toastr.error('连接失败: ' + error.message, 'Dual Tavern Bridge');
+  }
 }
+
 
 function disconnectFromServer() {
   if (ws) {
@@ -85,9 +136,12 @@ function disconnectFromServer() {
 // ===== 服务器消息处理 =====
 function handleServerMessage(message) {
   const { type, payload } = message;
+  
+  debugLog('HANDLE', `处理消息类型: ${type}`, payload);
 
   switch (type) {
     case 'room_created':
+      debugLog('ROOM', '房间创建成功', payload);
       currentRoomId = payload.roomId;
       $('#dtb_room_code_display').text(currentRoomId);
       $('#dtb_room_code_input').val(currentRoomId);
@@ -97,6 +151,7 @@ function handleServerMessage(message) {
       break;
 
     case 'room_joined':
+      debugLog('ROOM', '加入房间成功', payload);
       currentRoomId = payload.roomId;
       $('#dtb_room_code_display').text(currentRoomId);
       toastr.success('成功加入房间', 'Dual Tavern Bridge');
@@ -105,11 +160,13 @@ function handleServerMessage(message) {
       break;
 
     case 'partner_joined':
+      debugLog('ROOM', '对方加入房间', payload);
       partnerUserId = payload.partnerId;
       toastr.info('对方已加入房间', 'Dual Tavern Bridge');
       break;
 
     case 'partner_left':
+      debugLog('ROOM', '对方离开房间', payload);
       partnerUserId = null;
       partnerCharacter = null;
       updatePartnerCharacterDisplay();
@@ -117,8 +174,8 @@ function handleServerMessage(message) {
       break;
 
     case 'character_synced':
-      // 接收对方的角色信息
-      if (payload.ownerId !== ws.id) {
+      debugLog('CHARACTER', '角色同步', payload);
+      if (payload.ownerId !== (ws ? ws.id : null)) {
         partnerCharacter = payload.characterData;
         updatePartnerCharacterDisplay();
         console.log('📥 对方角色已同步:', partnerCharacter.name);
@@ -126,24 +183,31 @@ function handleServerMessage(message) {
       break;
 
     case 'waiting_for_partner':
+      debugLog('MESSAGE', '等待对方回复');
       isWaitingForPartner = true;
       showWaitingIndicator();
       break;
 
     case 'generate_response':
+      debugLog('MESSAGE', '触发 AI 生成', payload);
       handleDualGeneration(payload);
       break;
 
     case 'partner_message':
-      // 接收对方发送的消息（用于角色扮演模式）
+      debugLog('MESSAGE', '收到对方消息', payload);
       handlePartnerMessage(payload);
       break;
 
     case 'error':
+      debugLog('ERROR', '服务器错误', payload);
       toastr.error(payload.message, 'Dual Tavern Bridge');
       break;
+
+    default:
+      debugLog('WARN', '未知消息类型', { type, payload });
   }
 }
+
 
 // ===== 角色卡同步 =====
 function syncCurrentCharacter() {
@@ -406,13 +470,13 @@ function togglePanel(panelId) {
 }
 
 // ===== 初始化 UI =====
-jQuery(() => {
+jQuery(async () => {
   const settingsHtml = `
     <div class="dual-tavern-bridge-settings">
       
       <!-- 连接设置面板 -->
       <div class="dtb-panel">
-        <div class="dtb-panel-header" onclick="window.dtbTogglePanel('dtb_connection')">
+        <div class="dtb-panel-header" data-panel="dtb_connection">
           <div class="dtb-panel-title">
             <span class="dtb-panel-icon" id="dtb_connection_icon">▼</span>
             <span>🌐 连接设置</span>
@@ -446,7 +510,7 @@ jQuery(() => {
 
       <!-- 房间管理面板 -->
       <div class="dtb-panel">
-        <div class="dtb-panel-header" onclick="window.dtbTogglePanel('dtb_room')">
+        <div class="dtb-panel-header" data-panel="dtb_room">
           <div class="dtb-panel-title">
             <span class="dtb-panel-icon" id="dtb_room_icon">▼</span>
             <span>🏠 房间管理</span>
@@ -488,7 +552,7 @@ jQuery(() => {
 
       <!-- 对方角色信息面板 -->
       <div class="dtb-panel">
-        <div class="dtb-panel-header" onclick="window.dtbTogglePanel('dtb_partner')">
+        <div class="dtb-panel-header" data-panel="dtb_partner">
           <div class="dtb-panel-title">
             <span class="dtb-panel-icon" id="dtb_partner_icon">▼</span>
             <span>👥 对方角色信息</span>
@@ -507,7 +571,7 @@ jQuery(() => {
 
       <!-- 协作模式设置面板 -->
       <div class="dtb-panel">
-        <div class="dtb-panel-header" onclick="window.dtbTogglePanel('dtb_mode')">
+        <div class="dtb-panel-header" data-panel="dtb_mode">
           <div class="dtb-panel-title">
             <span class="dtb-panel-icon" id="dtb_mode_icon">▼</span>
             <span>🎭 协作模式</span>
@@ -551,14 +615,12 @@ jQuery(() => {
 
   $('#extensions_settings2').append(settingsHtml);
 
-  // 暴露折叠函数到全局
-  window.dtbTogglePanel = togglePanel;
-
   // 加载设置
   const settings = loadSettings();
   $('#dtb_enabled').prop('checked', settings.enabled);
   $('#dtb_server_url').val(settings.serverUrl);
   $('#dtb_roleplay_mode').prop('checked', settings.rolePlayMode);
+  isRolePlayMode = settings.rolePlayMode;
 
   // 初始化面板状态
   setTimeout(() => {
@@ -566,6 +628,24 @@ jQuery(() => {
       $(this).css('max-height', this.scrollHeight + 'px');
     });
   }, 100);
+
+  // ===== 折叠面板事件 =====
+  $('.dtb-panel-header').on('click', function(e) {
+    e.preventDefault();
+    const panelId = $(this).data('panel');
+    const content = $(`#${panelId}_content`);
+    const icon = $(`#${panelId}_icon`);
+    
+    if (content.hasClass('collapsed')) {
+      content.removeClass('collapsed');
+      content.css('max-height', content[0].scrollHeight + 'px');
+      icon.removeClass('collapsed');
+    } else {
+      content.addClass('collapsed');
+      content.css('max-height', '0');
+      icon.addClass('collapsed');
+    }
+  });
 
   // ===== 事件绑定 =====
   
@@ -583,7 +663,7 @@ jQuery(() => {
 
   // 服务器地址变更
   $('#dtb_server_url').on('change', function() {
-    settings.serverUrl = $(this).val();
+    settings.serverUrl = $(this).val().trim();
     saveSettings();
   });
 
@@ -601,32 +681,48 @@ jQuery(() => {
   });
 
   // 连接/断开按钮
-  $('#dtb_connect_btn').on('click', function() {
+  $('#dtb_connect_btn').on('click', function(e) {
+    e.preventDefault();
+    console.log('🔘 连接按钮被点击');
+    
     if (ws && ws.readyState === WebSocket.OPEN) {
+      console.log('🔌 执行断开连接');
       disconnectFromServer();
     } else {
+      console.log('🔌 执行连接');
       connectToServer();
     }
   });
 
   // 创建房间
-  $('#dtb_create_room').on('click', () => {
+  $('#dtb_create_room').on('click', function(e) {
+    e.preventDefault();
+    console.log('🔘 创建房间按钮被点击');
+    
     if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.warn('⚠️ WebSocket 未连接');
       toastr.warning('请先连接到服务器', 'Dual Tavern Bridge');
       return;
     }
     
+    console.log('📤 发送创建房间请求');
     ws.send(JSON.stringify({ type: 'create_room', payload: {} }));
   });
 
   // 加入房间
-  $('#dtb_join_room').on('click', () => {
+  $('#dtb_join_room').on('click', function(e) {
+    e.preventDefault();
+    console.log('🔘 加入房间按钮被点击');
+    
     if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.warn('⚠️ WebSocket 未连接');
       toastr.warning('请先连接到服务器', 'Dual Tavern Bridge');
       return;
     }
     
     const roomId = $('#dtb_room_code_input').val().trim().toUpperCase();
+    console.log('🔑 输入的房间码:', roomId);
+    
     if (!roomId) {
       toastr.warning('请输入房间码', 'Dual Tavern Bridge');
       return;
@@ -637,36 +733,73 @@ jQuery(() => {
       return;
     }
     
+    console.log('📤 发送加入房间请求:', roomId);
     ws.send(JSON.stringify({ type: 'join_room', payload: { roomId } }));
   });
 
   // 复制房间码
-  $('#dtb_copy_room_code').on('click', () => {
+  $('#dtb_copy_room_code').on('click', function(e) {
+    e.preventDefault();
     const roomCode = $('#dtb_room_code_display').text();
-    navigator.clipboard.writeText(roomCode).then(() => {
-      toastr.success('房间码已复制', 'Dual Tavern Bridge');
-    }).catch(() => {
-      toastr.error('复制失败', 'Dual Tavern Bridge');
-    });
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(roomCode).then(() => {
+        toastr.success('房间码已复制', 'Dual Tavern Bridge');
+      }).catch((err) => {
+        console.error('复制失败:', err);
+        fallbackCopy(roomCode);
+      });
+    } else {
+      fallbackCopy(roomCode);
+    }
   });
 
   // 离开房间
-  $('#dtb_leave_room').on('click', () => {
-    if (currentRoomId && ws) {
-      ws.send(JSON.stringify({ type: 'leave_room', payload: { roomId: currentRoomId } }));
-      currentRoomId = null;
-      partnerCharacter = null;
-      $('#dtb_room_code_display').text('------');
-      $('#dtb_room_code_input').val('');
-      hideRoomInfo();
-      updatePartnerCharacterDisplay();
-      toastr.info('已离开房间', 'Dual Tavern Bridge');
+  $('#dtb_leave_room').on('click', function(e) {
+    e.preventDefault();
+    console.log('🔘 离开房间按钮被点击');
+    console.log('📍 当前房间ID:', currentRoomId);
+    console.log('🔌 WebSocket 状态:', ws ? ws.readyState : 'null');
+    
+    if (!currentRoomId) {
+      toastr.warning('当前未在任何房间中', 'Dual Tavern Bridge');
+      return;
     }
+    
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      toastr.warning('连接已断开', 'Dual Tavern Bridge');
+      return;
+    }
+    
+    console.log('📤 发送离开房间请求');
+    ws.send(JSON.stringify({ 
+      type: 'leave_room', 
+      payload: { roomId: currentRoomId } 
+    }));
+    
+    // 立即更新本地状态
+    currentRoomId = null;
+    partnerCharacter = null;
+    partnerUserId = null;
+    $('#dtb_room_code_display').text('------');
+    $('#dtb_room_code_input').val('');
+    hideRoomInfo();
+    updatePartnerCharacterDisplay();
+    
+    toastr.info('已离开房间', 'Dual Tavern Bridge');
   });
 
   // 房间码输入框自动转大写
   $('#dtb_room_code_input').on('input', function() {
     $(this).val($(this).val().toUpperCase());
+  });
+
+  // 回车键加入房间
+  $('#dtb_room_code_input').on('keypress', function(e) {
+    if (e.which === 13) { // Enter 键
+      e.preventDefault();
+      $('#dtb_join_room').click();
+    }
   });
 
   // 角色切换时同步
@@ -678,4 +811,25 @@ jQuery(() => {
 
   console.log('✅ Dual Tavern Bridge 插件已加载');
 });
+
+// ===== 辅助函数：复制到剪贴板（兼容方案）=====
+function fallbackCopy(text) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  document.body.appendChild(textArea);
+  textArea.select();
+  
+  try {
+    document.execCommand('copy');
+    toastr.success('房间码已复制', 'Dual Tavern Bridge');
+  } catch (err) {
+    console.error('复制失败:', err);
+    toastr.error('复制失败，请手动复制', 'Dual Tavern Bridge');
+  }
+  
+  document.body.removeChild(textArea);
+}
+
 
