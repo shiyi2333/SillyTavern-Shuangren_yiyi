@@ -1,15 +1,13 @@
 {
-  "display_name": "ws for double players",
+  "display_name": "Dual Tavern Bridge",
   "loading_order": 15,
   "requires": [],
   "optional": [],
   "js": "index.js",
   "css": "style.css",
-  "author": "shiyi2333",
-  "version": "1.0.1",
-  "homePage": "https://github.com/shiyi2333/SillyTavern-Shuangren_yi",
-  "auto_update": true,
+  "author": "Your Name",
+  "version": "1.0.2",
+  "homePage": "https://github.com/yourusername/dual-tavern-bridge",
+  "auto_update": false,
   "minimum_client_version": "1.12.0"
 }
-
-
