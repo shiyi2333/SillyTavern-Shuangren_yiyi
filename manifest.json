@@ -6,9 +6,10 @@
   "js": "index.js",
   "css": "style.css",
   "author": "shiyi2333",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "homePage": "https://github.com/shiyi2333/SillyTavern-Shuangren_yi",
   "auto_update": true,
   "minimum_client_version": "1.12.0"
 }
+
 
