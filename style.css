@@ -716,7 +716,7 @@
   position: fixed;
   bottom: 30px;
   right: 30px;
-  z-index: 999;
+  z-index: 99; /* 略低于聊天 UI */
   display: flex;
   flex-direction: column;
   gap: 12px;

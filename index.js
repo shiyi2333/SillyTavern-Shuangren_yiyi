@@ -146,6 +146,7 @@ function handleServerMessage(message) {
       syncCurrentCharacter();
       showRoomInfo();
       updateMainUIRoomState(true);
+      updateChatUI(); // 添加这行
       break;
 
     case 'room_joined':
@@ -156,6 +157,7 @@ function handleServerMessage(message) {
       syncCurrentCharacter();
       showRoomInfo();
       updateMainUIRoomState(true);
+      updateChatUI(); // 添加这行
       break;
 
     case 'partner_joined':
@@ -165,6 +167,7 @@ function handleServerMessage(message) {
       if (!mainUIVisible) {
         $('#dtb_notification_badge').show();
       }
+      updateChatUI(); // 添加这行
       break;
 
     case 'partner_left':
@@ -173,6 +176,7 @@ function handleServerMessage(message) {
       partnerCharacter = null;
       updatePartnerCharacterDisplay();
       toastr.warning('对方已离开房间', 'Dual Tavern Bridge');
+      updateChatUI(); // 添加这行
       break;
 
     case 'character_synced':
@@ -447,9 +451,16 @@ function hideRoomInfo() {
 
 // ===== 主 UI 覆盖层 =====
 function createMainUI() {
+  // 检查主页容器是否存在
+  const mainContainer = $('#sheld');
+  if (!mainContainer.length) {
+    console.error('找不到 SillyTavern 主容器');
+    return;
+  }
+
   const mainUIHtml = `
     <!-- 快速操作按钮 -->
-    <div class="dtb-quick-actions">
+    <div class="dtb-quick-actions" id="dtb_quick_actions">
       <button class="dtb-fab primary" id="dtb_toggle_chat_ui" title="打开 Dual Tavern Bridge">
         🎭
         <span class="dtb-fab-badge" id="dtb_notification_badge" style="display: none;">!</span>
@@ -479,6 +490,31 @@ function createMainUI() {
         <!-- 左侧：我的角色 -->
         <div class="dtb-chat-left">
           <div class="dtb-section">
+            <div class="dtb-section-title">连接 & 房间</div>
+            <div style="padding: 0 12px;">
+              <div class="dtb-connection-card" style="margin-bottom: 12px;">
+                <div class="dtb-connection-status">
+                  <span style="font-size: 12px;">服务器</span>
+                  <span class="dtb-status-badge disconnected" id="dtb_chat_conn_status">
+                    <span class="dtb-status-dot"></span>
+                    未连接
+                  </span>
+                </div>
+              </div>
+              
+              <button id="dtb_chat_create_room" class="dtb-button primary" style="width: 100%; margin-bottom: 8px;">创建房间</button>
+              <div class="dtb-form-row">
+                <input type="text" id="dtb_chat_room_input" class="dtb-input" placeholder="房间码" maxlength="6" />
+                <button id="dtb_chat_join_room" class="dtb-button">加入</button>
+              </div>
+              <div id="dtb_chat_room_code_display" style="display: none; margin-top: 8px;">
+                <div style="padding: 8px; background: var(--black50a); border-radius: 6px; text-align: center; font-family: monospace; font-size: 18px; font-weight: bold; color: var(--SmartThemeQuoteColor); margin-bottom: 8px;" id="dtb_chat_current_room">------</div>
+                <button id="dtb_chat_leave_room" class="dtb-button danger" style="width: 100%;">离开房间</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="dtb-section">
             <div class="dtb-section-title">我的角色</div>
             <div id="dtb_my_char_display">
               <div class="dtb-empty-state">
@@ -486,24 +522,9 @@ function createMainUI() {
                 <div class="dtb-empty-text">未选择角色</div>
               </div>
             </div>
-            <button id="dtb_update_my_char" class="dtb-button primary" style="width: calc(100% - 24px); margin: 0 12px 12px;">
+            <button id="dtb_update_my_char_chat" class="dtb-button primary" style="width: calc(100% - 24px); margin: 0 12px 12px;">
               🔄 更新角色信息
             </button>
-          </div>
-          
-          <div class="dtb-section">
-            <div class="dtb-section-title">房间</div>
-            <div style="padding: 0 12px;">
-              <button id="dtb_chat_create_room" class="dtb-button primary" style="width: 100%; margin-bottom: 8px;">创建房间</button>
-              <div class="dtb-form-row">
-                <input type="text" id="dtb_chat_room_input" class="dtb-input" placeholder="房间码" maxlength="6" />
-                <button id="dtb_chat_join_room" class="dtb-button">加入</button>
-              </div>
-              <div id="dtb_chat_room_code_display" style="display: none; margin-top: 8px;">
-                <div class="dtb-room-code-large" id="dtb_chat_current_room">------</div>
-                <button id="dtb_chat_leave_room" class="dtb-button danger" style="width: 100%; margin-top: 8px;">离开房间</button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -540,10 +561,15 @@ function createMainUI() {
     </div>
   `;
 
+  // 插入到 body（因为是固定定位的覆盖层）
   $('body').append(mainUIHtml);
+  
   bindChatUIEvents();
   makeDraggable();
+  
+  console.log('✅ Dual Tavern Bridge 聊天 UI 已创建');
 }
+
 
 
 function bindChatUIEvents() {
@@ -608,10 +634,15 @@ function bindChatUIEvents() {
     }
   });
 
-  // 更新我的角色
-  $('#dtb_update_my_char').on('click', () => {
+  // 更新我的角色（聊天 UI 中的按钮）
+  $('#dtb_update_my_char_chat').on('click', () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      toastr.warning('请先连接服务器', 'Dual Tavern Bridge');
+      toastr.warning('请先在设置中连接服务器', 'Dual Tavern Bridge');
+      $('#dtb_chat_overlay').removeClass('active');
+      // 打开设置面板
+      setTimeout(() => {
+        $('#extensions_settings').click();
+      }, 300);
       return;
     }
     if (!currentRoomId) {
@@ -619,7 +650,7 @@ function bindChatUIEvents() {
       return;
     }
     syncCurrentCharacter();
-    toastr.success('角色信息已更新', 'Dual Tavern Bridge');
+    toastr.success('角色信息已更新并发送给对方', 'Dual Tavern Bridge');
   });
 
   // 发送消息
@@ -711,13 +742,16 @@ function addChatMessage(name, text, isUser) {
 
 // 更新聊天 UI
 function updateChatUI() {
-  // 更新连接状态
+  // 更新连接状态（两个地方）
   const statusDot = $('#dtb_chat_status_dot');
+  const connStatus = $('#dtb_chat_conn_status');
   const roomInfo = $('#dtb_chat_room_info');
   const sendBtn = $('#dtb_chat_send');
   
   if (ws && ws.readyState === WebSocket.OPEN) {
     statusDot.addClass('connected');
+    connStatus.removeClass('disconnected').addClass('connected').html('<span class="dtb-status-dot"></span>已连接');
+    
     if (currentRoomId) {
       roomInfo.text(`房间: ${currentRoomId}`);
       sendBtn.prop('disabled', false);
@@ -726,11 +760,14 @@ function updateChatUI() {
     } else {
       roomInfo.text('已连接 - 未加入房间');
       sendBtn.prop('disabled', true);
+      $('#dtb_chat_room_code_display').hide();
     }
   } else {
     statusDot.removeClass('connected');
+    connStatus.removeClass('connected').addClass('disconnected').html('<span class="dtb-status-dot"></span>未连接');
     roomInfo.text('未连接');
     sendBtn.prop('disabled', true);
+    $('#dtb_chat_room_code_display').hide();
   }
 
   // 更新我的角色
@@ -739,6 +776,7 @@ function updateChatUI() {
   // 更新对方角色
   updatePartnerChatCharacter();
 }
+
 
 // 更新我的角色显示
 function updateMyChatCharacter() {
@@ -1070,23 +1108,30 @@ jQuery(async () => {
       </div>
 
       <!-- 对方角色信息面板 -->
-      <div class="dtb-panel">
-        <div class="dtb-panel-header" data-panel="dtb_partner">
-          <div class="dtb-panel-title">
-            <span class="dtb-panel-icon" id="dtb_partner_icon">▼</span>
-            <span>👥 对方角色信息</span>
-          </div>
-        </div>
-        
-        <div class="dtb-panel-content" id="dtb_partner_content">
-          <div id="dtb_partner_character">
-            <div class="dtb-hint">
-              <span class="dtb-hint-icon">ℹ️</span>
-              等待对方加入并同步角色...
-            </div>
-          </div>
-        </div>
+      <!-- 对方角色信息面板 -->
+<div class="dtb-panel">
+  <div class="dtb-panel-header" data-panel="dtb_partner">
+    <div class="dtb-panel-title">
+      <span class="dtb-panel-icon" id="dtb_partner_icon">▼</span>
+      <span>👥 对方角色信息</span>
+    </div>
+  </div>
+  
+  <div class="dtb-panel-content" id="dtb_partner_content">
+    <div id="dtb_partner_character">
+      <div class="dtb-hint">
+        <span class="dtb-hint-icon">ℹ️</span>
+        等待对方加入并同步角色...
       </div>
+    </div>
+    
+    <!-- 添加这个更新按钮 -->
+    <button id="dtb_update_my_character" class="dtb-button primary" style="width: 100%; margin-top: 10px;">
+      🔄 更新我的角色信息
+    </button>
+  </div>
+</div>
+
 
       <!-- 协作模式设置面板 -->
       <div class="dtb-panel">
@@ -1255,6 +1300,24 @@ jQuery(async () => {
       $('#dtb_join_room').click();
     }
   });
+
+  // 更新我的角色信息按钮
+$('#dtb_update_my_character').on('click', function(e) {
+  e.preventDefault();
+  
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    toastr.warning('请先连接到服务器', 'Dual Tavern Bridge');
+    return;
+  }
+  
+  if (!currentRoomId) {
+    toastr.warning('请先加入房间', 'Dual Tavern Bridge');
+    return;
+  }
+  
+  syncCurrentCharacter();
+  toastr.success('角色信息已更新并发送给对方', 'Dual Tavern Bridge');
+});
 
   // 角色切换时自动同步
   eventSource.on(event_types.CHAT_CHANGED, () => {
