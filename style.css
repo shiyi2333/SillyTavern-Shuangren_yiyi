@@ -406,3 +406,487 @@
 .dtb-message-preview::-webkit-scrollbar-thumb:hover {
   background: var(--SmartThemeQuoteColor);
 }
+
+/* ===== 主页覆盖层 UI ===== */
+.dtb-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 1000; /* 低于角色选择弹窗 (通常是 9999+) */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: dtb-fade-in 0.3s ease-out;
+}
+
+.dtb-overlay.active {
+  display: flex;
+}
+
+@keyframes dtb-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ===== 主 UI 容器 ===== */
+.dtb-main-ui {
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  background: var(--SmartThemeBlurTintColor);
+  border: 2px solid var(--SmartThemeBorderColor);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dtb-slide-up 0.3s ease-out;
+}
+
+@keyframes dtb-slide-up {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ===== 头部 ===== */
+.dtb-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--black30a);
+  border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+
+.dtb-main-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--SmartThemeBodyColor);
+}
+
+.dtb-main-title-icon {
+  font-size: 24px;
+}
+
+.dtb-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dtb-icon-button {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--SmartThemeBlurTintColor);
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 18px;
+}
+
+.dtb-icon-button:hover {
+  background: var(--black50a);
+  border-color: var(--SmartThemeQuoteColor);
+  transform: scale(1.05);
+}
+
+.dtb-icon-button.close:hover {
+  background: #f44336;
+  border-color: #f44336;
+  color: white;
+}
+
+/* ===== 主体内容 ===== */
+.dtb-main-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ===== 左侧面板 ===== */
+.dtb-left-panel {
+  width: 300px;
+  background: var(--black10a);
+  border-right: 1px solid var(--SmartThemeBorderColor);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.dtb-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+
+.dtb-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--white70a);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+/* ===== 连接状态卡片 ===== */
+.dtb-connection-card {
+  padding: 12px;
+  background: var(--black30a);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dtb-connection-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dtb-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--black50a);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dtb-status-badge.connected {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+
+.dtb-status-badge.disconnected {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+/* ===== 房间卡片 ===== */
+.dtb-room-card-main {
+  padding: 12px;
+  background: var(--black30a);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dtb-room-code-large {
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  color: var(--SmartThemeQuoteColor);
+  text-align: center;
+  padding: 12px;
+  background: var(--black50a);
+  border-radius: 8px;
+  user-select: all;
+}
+
+/* ===== 右侧面板（角色信息）===== */
+.dtb-right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+  gap: 20px;
+}
+
+/* ===== 角色卡片（大版本）===== */
+.dtb-character-card-large {
+  background: var(--black30a);
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dtb-character-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dtb-character-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  background: var(--black50a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  border: 2px solid var(--SmartThemeBorderColor);
+  flex-shrink: 0;
+}
+
+.dtb-character-header-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dtb-character-name-large {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--SmartThemeBodyColor);
+}
+
+.dtb-character-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--SmartThemeQuoteColor);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  align-self: flex-start;
+}
+
+.dtb-character-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dtb-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dtb-detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--white70a);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dtb-detail-content {
+  padding: 10px;
+  background: var(--black50a);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--SmartThemeBodyColor);
+  line-height: 1.5;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.dtb-detail-content:empty::before {
+  content: '暂无信息';
+  color: var(--white50a);
+  font-style: italic;
+}
+
+/* ===== 快速操作按钮 ===== */
+.dtb-quick-actions {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dtb-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--SmartThemeQuoteColor);
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.dtb-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dtb-fab.primary {
+  background: var(--SmartThemeQuoteColor);
+}
+
+.dtb-fab.secondary {
+  width: 48px;
+  height: 48px;
+  background: var(--SmartThemeBlurTintColor);
+  border: 2px solid var(--SmartThemeBorderColor);
+  font-size: 20px;
+}
+
+.dtb-fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background: #4CAF50;
+  border-radius: 50%;
+  border: 2px solid var(--SmartThemeBlurTintColor);
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== 空状态 ===== */
+.dtb-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  color: var(--white70a);
+}
+
+.dtb-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.dtb-empty-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.dtb-empty-hint {
+  font-size: 13px;
+  color: var(--white50a);
+}
+
+/* ===== 响应式设计 ===== */
+@media (max-width: 768px) {
+  .dtb-main-ui {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .dtb-main-body {
+    flex-direction: column;
+  }
+
+  .dtb-left-panel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    max-height: 40vh;
+  }
+
+  .dtb-right-panel {
+    padding: 16px;
+  }
+
+  .dtb-quick-actions {
+    bottom: 20px;
+    right: 20px;
+  }
+
+  .dtb-fab {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .dtb-fab.secondary {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+}
+
+/* ===== 滚动条样式（统一）===== */
+.dtb-left-panel::-webkit-scrollbar,
+.dtb-right-panel::-webkit-scrollbar,
+.dtb-detail-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dtb-left-panel::-webkit-scrollbar-track,
+.dtb-right-panel::-webkit-scrollbar-track,
+.dtb-detail-content::-webkit-scrollbar-track {
+  background: var(--black30a);
+  border-radius: 4px;
+}
+
+.dtb-left-panel::-webkit-scrollbar-thumb,
+.dtb-right-panel::-webkit-scrollbar-thumb,
+.dtb-detail-content::-webkit-scrollbar-thumb {
+  background: var(--SmartThemeBorderColor);
+  border-radius: 4px;
+}
+
+.dtb-left-panel::-webkit-scrollbar-thumb:hover,
+.dtb-right-panel::-webkit-scrollbar-thumb:hover,
+.dtb-detail-content::-webkit-scrollbar-thumb:hover {
+  background: var(--SmartThemeQuoteColor);
+}
+
+/* ===== 加载动画 ===== */
+.dtb-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dtb-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--black50a);
+  border-top-color: var(--SmartThemeQuoteColor);
+  border-radius: 50%;
+  animation: dtb-spin 1s linear infinite;
+}
+
+@keyframes dtb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
