@@ -26,7 +26,7 @@ const defaultSettings = {
 function debugLog(category, message, data = null) {
   const timestamp = new Date().toLocaleTimeString();
   const prefix = `[DTB ${timestamp}] [${category}]`;
-  
+
   if (data) {
     console.log(prefix, message, data);
   } else {
@@ -36,14 +36,14 @@ function debugLog(category, message, data = null) {
 
 function getWebSocketStatus() {
   if (!ws) return 'NULL';
-  
+
   const states = {
     0: 'CONNECTING',
     1: 'OPEN',
     2: 'CLOSING',
     3: 'CLOSED'
   };
-  
+
   return states[ws.readyState] || 'UNKNOWN';
 }
 
@@ -66,9 +66,9 @@ function saveSettings() {
 // ===== WebSocket 连接管理 =====
 function connectToServer() {
   const settings = loadSettings();
-  
+
   debugLog('CONNECT', '开始连接到服务器', { url: settings.serverUrl });
-  
+
   if (ws && ws.readyState === WebSocket.OPEN) {
     toastr.info('已连接到服务器', 'Dual Tavern Bridge');
     return;
@@ -133,7 +133,7 @@ function disconnectFromServer() {
 // ===== 服务器消息处理 =====
 function handleServerMessage(message) {
   const { type, payload } = message;
-  
+
   debugLog('HANDLE', `处理消息类型: ${type}`, payload);
 
   switch (type) {
@@ -180,14 +180,14 @@ function handleServerMessage(message) {
       break;
 
     case 'character_synced':
-  debugLog('CHARACTER', '角色同步', payload);
-  if (payload.ownerId !== (ws ? ws.id : null)) {
-    partnerCharacter = payload.characterData;
-    updatePartnerCharacterDisplay();
-    updatePartnerChatCharacter(); // 添加这行
-    console.log('📥 对方角色已同步:', partnerCharacter.name);
-  }
-  break;
+      debugLog('CHARACTER', '角色同步', payload);
+      if (payload.ownerId !== (ws ? ws.id : null)) {
+        partnerCharacter = payload.characterData;
+        updatePartnerCharacterDisplay();
+        updatePartnerChatCharacter(); // 添加这行
+        console.log('📥 对方角色已同步:', partnerCharacter.name);
+      }
+      break;
 
 
     case 'waiting_for_partner':
@@ -227,7 +227,7 @@ function syncCurrentCharacter() {
   }
 
   const character = characters[characterId];
-  
+
   const characterData = {
     name: character.name,
     description: character.data?.description || character.description || '',
@@ -249,19 +249,40 @@ function syncCurrentCharacter() {
   updateMainUIMyCharacter();
 }
 
+// ===== 获取用户人设 =====
+function getUserPersona() {
+  // 尝试获取 ST 的用户设置
+  // 注意：这里假设 SillyTavern 暴露了 user_name 和 user_description 或者在 context 中
+  // 如果没有直接暴露，可能需要从 DOM 或其他全局变量获取
+  const context = SillyTavern.getContext();
+
+  // 尝试从全局变量获取（根据 ST 版本可能不同）
+  let description = '';
+  if (typeof SillyTavern.userSettings !== 'undefined' && SillyTavern.userSettings.user_description) {
+    description = SillyTavern.userSettings.user_description;
+  } else if (context.user_description) {
+    description = context.user_description;
+  }
+
+  return {
+    name: context.name || 'User',
+    description: description || ''
+  };
+}
+
 // ===== 消息拦截和处理 =====
 eventSource.on(event_types.MESSAGE_SENT, async (messageId) => {
   const settings = loadSettings();
-  
+
   if (!settings.enabled || !ws || ws.readyState !== WebSocket.OPEN || !currentRoomId) {
     return;
   }
 
   const context = SillyTavern.getContext();
   const { chat } = context;
-  
+
   const lastMessage = chat[chat.length - 1];
-  
+
   if (!lastMessage || !lastMessage.is_user) {
     return;
   }
@@ -292,26 +313,40 @@ eventSource.on(event_types.MESSAGE_SENT, async (messageId) => {
 
 // ===== 角色扮演模式处理 =====
 function handleRolePlayMessage(message) {
+  const userPersona = getUserPersona();
+
+  // 角色扮演模式提示词格式
+  // [{角色接下来的行为倾向为:{扮演角色的用户的输入}}]
+  const formattedMessage = `[{Character tendency: ${message}}]`;
+
   ws.send(JSON.stringify({
     type: 'roleplay_message',
     payload: {
-      message: message,
+      message: formattedMessage, // 发送格式化后的消息
+      rawMessage: message, // 保留原始消息用于显示
       characterName: partnerCharacter.name,
-      isRoleResponse: true
+      isRoleResponse: true,
+      userPersona
     }
   }));
 
   console.log('🎭 角色扮演消息已发送');
-  addMessageToChat(partnerCharacter.name, message, false);
+  addMessageToChat(partnerCharacter.name, message, false); // 本地显示原始消息
 }
 
 // ===== 接收对方消息 =====
+let partnerPersona = null; // 存储对方人设
+
 async function handlePartnerMessage(payload) {
-  const { message, characterName, isRoleResponse } = payload;
-  
+  const { message, characterName, isRoleResponse, userPersona } = payload;
+
+  if (userPersona) {
+    partnerPersona = userPersona;
+  }
+
   // 添加到聊天 UI
-  addChatMessage(characterName || '对方', message, false);
-  
+  addChatMessage(characterName || (userPersona ? userPersona.name : '对方'), message, false);
+
   if (isRoleResponse) {
     await addMessageToChat(characterName, message, false);
     toastr.info(`${characterName} 回复了`, 'Dual Tavern Bridge');
@@ -321,7 +356,6 @@ async function handlePartnerMessage(payload) {
 
   $('#dtb_partner_message_preview').text(message);
 }
-
 
 // ===== 双人消息生成 =====
 async function handleDualGeneration(payload) {
@@ -338,15 +372,15 @@ async function handleDualGeneration(payload) {
 Character Personality: ${character.data?.personality || character.personality || ''}
 Scenario: ${character.data?.scenario || character.scenario || ''}`;
 
-  const prompt = `[Identity Instruction]: Respond as if you are ${userA.message}
+  // 构建新的提示词格式
+  const userAPrompt = `[{${userA.persona?.name || 'User'} Persona: ${userA.persona?.description || ''}] {${userA.persona?.name || 'User'} Input: ${userA.message}}`;
+  const userBPrompt = `[{${userB.persona?.name || 'Partner'} Persona: ${userB.persona?.description || ''}] {${userB.persona?.name || 'Partner'} Input: ${userB.message}}`;
 
-[Response Direction]: ${userB.message}
-
-Based on the identity instruction and response direction above, generate a response as ${character.name}. Stay in character and follow the response direction naturally.`;
+  const prompt = `${userAPrompt}\n${userBPrompt}\n\nBased on the above inputs, generate a response as ${character.name}.`;
 
   try {
     console.log('🤖 开始生成 AI 回复...');
-    
+
     const result = await generateRaw({
       systemPrompt,
       prompt,
@@ -359,7 +393,7 @@ Based on the identity instruction and response direction above, generate a respo
         userB: userB.message
       }
     });
-    
+
     console.log('✅ AI 回复已生成');
     toastr.success('AI 回复已生成', 'Dual Tavern Bridge');
     addChatMessage(character.name, result, false);
@@ -372,7 +406,7 @@ Based on the identity instruction and response direction above, generate a respo
 // ===== 添加消息到聊天 =====
 async function addMessageToChat(name, message, isUser, extra = {}) {
   const context = SillyTavern.getContext();
-  
+
   const messageData = {
     name: name,
     is_user: isUser,
@@ -391,7 +425,7 @@ async function addMessageToChat(name, message, isUser, extra = {}) {
 function updateConnectionStatus(connected) {
   const statusDot = $('#dtb_status_dot');
   const statusText = $('#dtb_status_text');
-  
+
   if (connected) {
     statusDot.addClass('connected');
     statusText.text('已连接');
@@ -401,13 +435,13 @@ function updateConnectionStatus(connected) {
     statusText.text('未连接');
     $('#dtb_connect_btn').text('连接').removeClass('danger').addClass('primary');
   }
-  
+
   updateMainUIStatus();
 }
 
 function updatePartnerCharacterDisplay() {
   const container = $('#dtb_partner_character');
-  
+
   if (!partnerCharacter) {
     container.html(`
       <div class="dtb-hint">
@@ -427,7 +461,7 @@ function updatePartnerCharacterDisplay() {
       </div>
     `);
   }
-  
+
   updateMainUIPartnerCharacter();
 }
 
@@ -468,7 +502,7 @@ function createMainUI() {
     </div>
 
     <!-- 聊天覆盖层 -->
-    <div class="dtb-chat-overlay" id="dtb_chat_overlay">
+    <div class="dtb-chat-overlay" id="dtb_chat_overlay" style="display: none;">
       <!-- 头部 -->
       <div class="dtb-chat-header" id="dtb_chat_header_drag">
         <div class="dtb-chat-header-left">
@@ -563,10 +597,10 @@ function createMainUI() {
 
   // 插入到 body（因为是固定定位的覆盖层）
   $('body').append(mainUIHtml);
-  
+
   bindChatUIEvents();
   makeDraggable();
-  
+
   console.log('✅ Dual Tavern Bridge 聊天 UI 已创建');
 }
 
@@ -655,7 +689,7 @@ function bindChatUIEvents() {
 
   // 发送消息
   $('#dtb_chat_send').on('click', sendChatMessage);
-  
+
   $('#dtb_chat_input').on('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -664,13 +698,13 @@ function bindChatUIEvents() {
   });
 
   // 输入框自动调整高度
-  $('#dtb_chat_input').on('input', function() {
+  $('#dtb_chat_input').on('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
   });
 
   // 房间码输入自动大写
-  $('#dtb_chat_room_input').on('input', function() {
+  $('#dtb_chat_room_input').on('input', function () {
     $(this).val($(this).val().toUpperCase());
   });
 }
@@ -679,7 +713,7 @@ function bindChatUIEvents() {
 function sendChatMessage() {
   const input = $('#dtb_chat_input');
   const message = input.val().trim();
-  
+
   if (!message) return;
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     toastr.warning('未连接到服务器', 'Dual Tavern Bridge');
@@ -691,20 +725,23 @@ function sendChatMessage() {
   }
 
   const settings = loadSettings();
-  
+
   // 添加到本地消息列表
   addChatMessage('我', message, true);
-  
+
   // 发送到服务器
+  const userPersona = getUserPersona();
+
   if (settings.rolePlayMode && partnerCharacter) {
-    ws.send(JSON.stringify({
-      type: 'roleplay_message',
-      payload: { message, characterName: partnerCharacter.name, isRoleResponse: true }
-    }));
+    handleRolePlayMessage(message);
   } else {
     ws.send(JSON.stringify({
       type: 'send_message',
-      payload: { message, characterId: SillyTavern.getContext().characterId }
+      payload: {
+        message,
+        characterId: SillyTavern.getContext().characterId,
+        userPersona
+      }
     }));
   }
 
@@ -715,7 +752,7 @@ function sendChatMessage() {
 function addChatMessage(name, text, isUser) {
   const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   const avatar = isUser ? '👤' : '🎭';
-  
+
   const messageHtml = `
     <div class="dtb-message-item ${isUser ? 'user' : ''}">
       <div class="dtb-message-avatar">${avatar}</div>
@@ -728,15 +765,15 @@ function addChatMessage(name, text, isUser) {
       </div>
     </div>
   `;
-  
+
   const container = $('#dtb_chat_messages');
-  
+
   // 移除空状态
   container.find('.dtb-empty-state').remove();
-  
+
   container.append(messageHtml);
   container.scrollTop(container[0].scrollHeight);
-  
+
   chatMessages.push({ name, text, isUser, time });
 }
 
@@ -747,11 +784,11 @@ function updateChatUI() {
   const connStatus = $('#dtb_chat_conn_status');
   const roomInfo = $('#dtb_chat_room_info');
   const sendBtn = $('#dtb_chat_send');
-  
+
   if (ws && ws.readyState === WebSocket.OPEN) {
     statusDot.addClass('connected');
     connStatus.removeClass('disconnected').addClass('connected').html('<span class="dtb-status-dot"></span>已连接');
-    
+
     if (currentRoomId) {
       roomInfo.text(`房间: ${currentRoomId}`);
       sendBtn.prop('disabled', false);
@@ -772,7 +809,7 @@ function updateChatUI() {
 
   // 更新我的角色
   updateMyChatCharacter();
-  
+
   // 更新对方角色
   updatePartnerChatCharacter();
 }
@@ -869,12 +906,12 @@ function toggleMainUI() {
 function showMainUI() {
   $('#dtb_main_overlay').addClass('active');
   mainUIVisible = true;
-  
+
   updateMainUIStatus();
   updateMainUIMyCharacter();
   updateMainUIPartnerCharacter();
   updateMainUIRoomState(!!currentRoomId);
-  
+
   $('#dtb_notification_badge').hide();
 }
 
@@ -886,7 +923,7 @@ function hideMainUI() {
 function updateMainUIStatus() {
   const badge = $('#dtb_main_status');
   const button = $('#dtb_main_connect');
-  
+
   if (ws && ws.readyState === WebSocket.OPEN) {
     badge.removeClass('disconnected').addClass('connected').html('<span class="dtb-status-dot"></span>已连接');
     button.text('断开连接').removeClass('primary').addClass('danger');
@@ -894,7 +931,7 @@ function updateMainUIStatus() {
     badge.removeClass('connected').addClass('disconnected').html('<span class="dtb-status-dot"></span>未连接');
     button.text('连接').removeClass('danger').addClass('primary');
   }
-  
+
   const settings = loadSettings();
   $('#dtb_main_server_url').val(settings.serverUrl);
 }
@@ -916,7 +953,7 @@ function updateMainUIMyCharacter() {
   const context = SillyTavern.getContext();
   const { characters, characterId } = context;
 
-    if (characterId === undefined || !characters[characterId]) {
+  if (characterId === undefined || !characters[characterId]) {
     container.html(`
       <div class="dtb-empty-state">
         <div class="dtb-empty-icon">👤</div>
@@ -1001,7 +1038,7 @@ function updateMainUIPartnerCharacter() {
       </div>
     </div>
   `);
-  
+
   if (!mainUIVisible) {
     $('#dtb_notification_badge').show();
   }
@@ -1015,7 +1052,7 @@ function fallbackCopy(text) {
   textArea.style.left = '-999999px';
   document.body.appendChild(textArea);
   textArea.select();
-  
+
   try {
     document.execCommand('copy');
     toastr.success('房间码已复制', 'Dual Tavern Bridge');
@@ -1023,214 +1060,212 @@ function fallbackCopy(text) {
     console.error('复制失败:', err);
     toastr.error('复制失败，请手动复制', 'Dual Tavern Bridge');
   }
-  
+
   document.body.removeChild(textArea);
 }
 
-// ===== 初始化 =====
+
 jQuery(async () => {
   // 创建设置面板
   const settingsHtml = `
-    <div class="dual-tavern-bridge-settings">
+    <div class="dual-tavern-bridge-settings-container">
+      <div class="dtb-main-settings-header" id="dtb_main_settings_toggle">
+        <div class="dtb-main-settings-title">
+          <span class="dtb-main-icon">🎭</span>
+          <span>Dual Tavern Bridge 插件设置</span>
+        </div>
+        <span class="dtb-arrow-icon">▼</span>
+      </div>
       
-      <!-- 连接设置面板 -->
-      <div class="dtb-panel">
-        <div class="dtb-panel-header" data-panel="dtb_connection">
-          <div class="dtb-panel-title">
-            <span class="dtb-panel-icon" id="dtb_connection_icon">▼</span>
-            <span>🌐 连接设置</span>
-          </div>
-          <div class="dtb-status-indicator">
-            <span class="dtb-status-dot" id="dtb_status_dot"></span>
-            <span id="dtb_status_text">未连接</span>
-          </div>
-        </div>
-        
-        <div class="dtb-panel-content" id="dtb_connection_content">
-          <div class="dtb-checkbox-wrapper">
-            <input type="checkbox" id="dtb_enabled" />
-            <label class="dtb-checkbox-label" for="dtb_enabled">启用双人协作模式</label>
-          </div>
+      <div class="dtb-main-settings-content collapsed" id="dtb_main_settings_body">
+        <div class="dual-tavern-bridge-settings">
           
-          <div class="dtb-form-group">
-            <label class="dtb-form-label">服务器地址</label>
-            <div class="dtb-form-row">
-              <input type="text" id="dtb_server_url" class="dtb-input" placeholder="wss://your-tunnel.trycloudflare.com" />
-              <button id="dtb_connect_btn" class="dtb-button primary">连接</button>
-            </div>
-          </div>
-          
-          <div class="dtb-hint">
-            <span class="dtb-hint-icon">💡</span>
-            使用 cloudflared 创建隧道后，将 https:// 改为 wss:// 填入上方
-          </div>
-        </div>
-      </div>
-
-      <!-- 房间管理面板 -->
-      <div class="dtb-panel">
-        <div class="dtb-panel-header" data-panel="dtb_room">
-          <div class="dtb-panel-title">
-            <span class="dtb-panel-icon" id="dtb_room_icon">▼</span>
-            <span>🏠 房间管理</span>
-          </div>
-        </div>
-        
-        <div class="dtb-panel-content" id="dtb_room_content">
-          <div id="dtb_create_join_section">
-            <div class="dtb-button-group">
-              <button id="dtb_create_room" class="dtb-button primary" style="flex: 1;">创建房间</button>
-            </div>
-            
-            <div class="dtb-divider"></div>
-            
-            <div class="dtb-form-group">
-              <label class="dtb-form-label">加入现有房间</label>
-              <div class="dtb-form-row">
-                <input type="text" id="dtb_room_code_input" class="dtb-input" placeholder="输入 6 位房间码" maxlength="6" />
-                <button id="dtb_join_room" class="dtb-button">加入</button>
+          <!-- 连接设置面板 -->
+          <div class="dtb-panel">
+            <div class="dtb-panel-header" data-panel="dtb_connection">
+              <div class="dtb-panel-title">
+                <span class="dtb-panel-icon" id="dtb_connection_icon">▼</span>
+                <span>🌐 连接设置</span>
               </div>
-            </div>
-          </div>
-          
-          <div id="dtb_room_info" style="display: none;">
-            <div class="dtb-room-card">
-              <label class="dtb-form-label">当前房间码</label>
-              <div class="dtb-room-code-display">
-                <span id="dtb_room_code_display">------</span>
-                <button id="dtb_copy_room_code" class="dtb-button dtb-copy-button">复制</button>
+              <div class="dtb-status-indicator">
+                <span class="dtb-status-dot" id="dtb_status_dot"></span>
+                <span id="dtb_status_text">未连接</span>
               </div>
             </div>
             
-            <button id="dtb_leave_room" class="dtb-button danger" style="width: 100%;">离开房间</button>
+            <div class="dtb-panel-content" id="dtb_connection_content">
+              <div class="dtb-checkbox-wrapper">
+                <input type="checkbox" id="dtb_enabled" />
+                <label class="dtb-checkbox-label" for="dtb_enabled">启用双人协作模式</label>
+              </div>
+              
+              <div class="dtb-form-group">
+                <label class="dtb-form-label">服务器地址</label>
+                <div class="dtb-form-row">
+                  <input type="text" id="dtb_server_url" class="dtb-input" placeholder="wss://your-tunnel.trycloudflare.com" />
+                  <button id="dtb_connect_btn" class="dtb-button primary">连接</button>
+                </div>
+              </div>
+              
+              <div class="dtb-hint">
+                <span class="dtb-hint-icon">💡</span>
+                使用 cloudflared 创建隧道后，将 https:// 改为 wss:// 填入上方
+              </div>
+            </div>
           </div>
+
+          <!-- 房间管理面板 -->
+          <div class="dtb-panel">
+            <div class="dtb-panel-header" data-panel="dtb_room">
+              <div class="dtb-panel-title">
+                <span class="dtb-panel-icon" id="dtb_room_icon">▼</span>
+                <span>🏠 房间管理</span>
+              </div>
+            </div>
+            
+            <div class="dtb-panel-content collapsed" id="dtb_room_content">
+              <div id="dtb_create_join_section">
+                <div class="dtb-button-group">
+                  <button id="dtb_create_room" class="dtb-button primary" style="flex: 1;">创建房间</button>
+                </div>
+                
+                <div class="dtb-divider"></div>
+                
+                <div class="dtb-form-group">
+                  <label class="dtb-form-label">加入现有房间</label>
+                  <div class="dtb-form-row">
+                    <input type="text" id="dtb_room_code_input" class="dtb-input" placeholder="输入 6 位房间码" maxlength="6" />
+                    <button id="dtb_join_room" class="dtb-button">加入</button>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="dtb_room_info" style="display: none;">
+                <div class="dtb-room-card">
+                  <label class="dtb-form-label">当前房间码</label>
+                  <div class="dtb-room-code-display">
+                    <span id="dtb_room_code_display">------</span>
+                    <button id="dtb_copy_room_code" class="dtb-button dtb-copy-button">复制</button>
+                  </div>
+                </div>
+                
+                <button id="dtb_leave_room" class="dtb-button danger" style="width: 100%;">离开房间</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 对方角色信息面板 -->
+          <div class="dtb-panel">
+            <div class="dtb-panel-header" data-panel="dtb_partner">
+              <div class="dtb-panel-title">
+                <span class="dtb-panel-icon" id="dtb_partner_icon">▼</span>
+                <span>👥 对方角色信息</span>
+              </div>
+            </div>
+            
+            <div class="dtb-panel-content collapsed" id="dtb_partner_content">
+              <div id="dtb_partner_character">
+                <div class="dtb-hint">
+                  <span class="dtb-hint-icon">ℹ️</span>
+                  等待对方加入并同步角色...
+                </div>
+              </div>
+              
+              <button id="dtb_update_my_character" class="dtb-button primary" style="width: 100%; margin-top: 10px;">
+                🔄 更新我的角色信息
+              </button>
+            </div>
+          </div>
+
+          <!-- 协作模式设置面板 -->
+          <div class="dtb-panel">
+            <div class="dtb-panel-header" data-panel="dtb_mode">
+              <div class="dtb-panel-title">
+                <span class="dtb-panel-icon" id="dtb_mode_icon">▼</span>
+                <span>🎭 协作模式</span>
+              </div>
+            </div>
+            
+            <div class="dtb-panel-content collapsed" id="dtb_mode_content">
+              <div class="dtb-checkbox-wrapper">
+                <input type="checkbox" id="dtb_roleplay_mode" />
+                <label class="dtb-checkbox-label" for="dtb_roleplay_mode">启用角色扮演模式</label>
+              </div>
+              
+              <div class="dtb-hint">
+                <span class="dtb-hint-icon">ℹ️</span>
+                <strong>普通模式：</strong>双方消息组合后生成 AI 回复<br>
+                <strong>角色扮演模式：</strong>你扮演对方的角色，直接回复对方
+              </div>
+              
+              <div class="dtb-divider"></div>
+              
+              <div class="dtb-form-group">
+                <label class="dtb-form-label">我的消息预览</label>
+                <div class="dtb-message-preview" id="dtb_my_message_preview">暂无消息</div>
+              </div>
+              
+              <div class="dtb-form-group">
+                <label class="dtb-form-label">对方消息预览</label>
+                <div class="dtb-message-preview" id="dtb_partner_message_preview">暂无消息</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="dtb_waiting_indicator" class="dtb-waiting-indicator" style="display: none;">
+            <div class="dtb-waiting-spinner"></div>
+            <span class="dtb-waiting-text">等待对方回复...</span>
+          </div>
+
         </div>
       </div>
-
-      <!-- 对方角色信息面板 -->
-      <!-- 对方角色信息面板 -->
-<div class="dtb-panel">
-  <div class="dtb-panel-header" data-panel="dtb_partner">
-    <div class="dtb-panel-title">
-      <span class="dtb-panel-icon" id="dtb_partner_icon">▼</span>
-      <span>👥 对方角色信息</span>
-    </div>
-  </div>
-  
-  <div class="dtb-panel-content" id="dtb_partner_content">
-    <div id="dtb_partner_character">
-      <div class="dtb-hint">
-        <span class="dtb-hint-icon">ℹ️</span>
-        等待对方加入并同步角色...
-      </div>
-    </div>
-    
-    <!-- 添加这个更新按钮 -->
-    <button id="dtb_update_my_character" class="dtb-button primary" style="width: 100%; margin-top: 10px;">
-      🔄 更新我的角色信息
-    </button>
-  </div>
-</div>
-
-
-      <!-- 协作模式设置面板 -->
-      <div class="dtb-panel">
-        <div class="dtb-panel-header" data-panel="dtb_mode">
-          <div class="dtb-panel-title">
-            <span class="dtb-panel-icon" id="dtb_mode_icon">▼</span>
-            <span>🎭 协作模式</span>
-          </div>
-        </div>
-        
-        <div class="dtb-panel-content" id="dtb_mode_content">
-          <div class="dtb-checkbox-wrapper">
-            <input type="checkbox" id="dtb_roleplay_mode" />
-            <label class="dtb-checkbox-label" for="dtb_roleplay_mode">启用角色扮演模式</label>
-          </div>
-          
-          <div class="dtb-hint">
-            <span class="dtb-hint-icon">ℹ️</span>
-            <strong>普通模式：</strong>双方消息组合后生成 AI 回复<br>
-            <strong>角色扮演模式：</strong>你扮演对方的角色，直接回复对方
-          </div>
-          
-          <div class="dtb-divider"></div>
-          
-          <div class="dtb-form-group">
-            <label class="dtb-form-label">我的消息预览</label>
-            <div class="dtb-message-preview" id="dtb_my_message_preview">暂无消息</div>
-          </div>
-          
-          <div class="dtb-form-group">
-            <label class="dtb-form-label">对方消息预览</label>
-            <div class="dtb-message-preview" id="dtb_partner_message_preview">暂无消息</div>
-          </div>
-        </div>
-      </div>
-
-      <div id="dtb_waiting_indicator" class="dtb-waiting-indicator" style="display: none;">
-        <div class="dtb-waiting-spinner"></div>
-        <span class="dtb-waiting-text">等待对方回复...</span>
-      </div>
-
     </div>
   `;
 
-  $('#extensions_settings2').append(settingsHtml);
+  // 插入设置面板
+  // 尝试插入到扩展设置区域，如果找不到则插入到 body
+  // 注意：这里我们直接插入 body 并通过 CSS 控制位置/显示，或者依赖 ST 的扩展加载机制
+  // 既然之前的代码是 append(settingsHtml)，我们假设它能工作
+  $('body').append(settingsHtml);
 
-  // 加载设置
-  const settings = loadSettings();
-  $('#dtb_enabled').prop('checked', settings.enabled);
-  $('#dtb_server_url').val(settings.serverUrl);
-  $('#dtb_roleplay_mode').prop('checked', settings.rolePlayMode);
-  isRolePlayMode = settings.rolePlayMode;
-
-  // 初始化面板状态
-  setTimeout(() => {
-    $('.dtb-panel-content').each(function() {
-      $(this).css('max-height', this.scrollHeight + 'px');
-    });
-  }, 100);
-
-  // 折叠面板事件
-  $('.dtb-panel-header').on('click', function(e) {
-    e.preventDefault();
-    const panelId = $(this).data('panel');
-    const content = $(`#${panelId}_content`);
-    const icon = $(`#${panelId}_icon`);
-    
-    if (content.hasClass('collapsed')) {
-      content.removeClass('collapsed');
-      content.css('max-height', content[0].scrollHeight + 'px');
-      icon.removeClass('collapsed');
+  // 绑定设置面板事件
+  $('#dtb_main_settings_toggle').on('click', () => {
+    $('#dtb_main_settings_body').toggleClass('collapsed');
+    const icon = $('#dtb_main_settings_toggle .dtb-arrow-icon');
+    if ($('#dtb_main_settings_body').hasClass('collapsed')) {
+      icon.text('▼');
     } else {
-      content.addClass('collapsed');
-      content.css('max-height', '0');
-      icon.addClass('collapsed');
+      icon.text('▲');
     }
   });
 
-  // 事件绑定
-  $('#dtb_enabled').on('change', function() {
-    settings.enabled = $(this).prop('checked');
-    saveSettings();
-    toastr.info(settings.enabled ? '双人协作模式已启用' : '双人协作模式已禁用', 'Dual Tavern Bridge');
+  $('.dtb-panel-header').on('click', function () {
+    const panelId = $(this).data('panel');
+    const content = $(`#${panelId}_content`);
+    const icon = $(this).find('.dtb-panel-icon');
+
+    content.toggleClass('collapsed');
+    if (content.hasClass('collapsed')) {
+      icon.text('▼');
+    } else {
+      icon.text('▲');
+    }
   });
 
-  $('#dtb_server_url').on('change', function() {
-    settings.serverUrl = $(this).val().trim();
+  // 绑定设置输入事件
+  $('#dtb_enabled').on('change', function () {
+    const settings = loadSettings();
+    settings.enabled = $(this).is(':checked');
     saveSettings();
   });
 
-  $('#dtb_roleplay_mode').on('change', function() {
-    settings.rolePlayMode = $(this).prop('checked');
-    isRolePlayMode = settings.rolePlayMode;
+  $('#dtb_server_url').on('change', function () {
+    const settings = loadSettings();
+    settings.serverUrl = $(this).val();
     saveSettings();
-    toastr.info(settings.rolePlayMode ? '已切换到角色扮演模式' : '已切换到普通协作模式', 'Dual Tavern Bridge');
   });
 
-  $('#dtb_connect_btn').on('click', function(e) {
-    e.preventDefault();
+  $('#dtb_connect_btn').on('click', () => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       disconnectFromServer();
     } else {
@@ -1238,19 +1273,17 @@ jQuery(async () => {
     }
   });
 
-  $('#dtb_create_room').on('click', function(e) {
-    e.preventDefault();
+  $('#dtb_create_room').on('click', () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      toastr.warning('请先连接到服务器', 'Dual Tavern Bridge');
+      toastr.warning('请先连接服务器', 'Dual Tavern Bridge');
       return;
     }
     ws.send(JSON.stringify({ type: 'create_room', payload: {} }));
   });
 
-  $('#dtb_join_room').on('click', function(e) {
-    e.preventDefault();
+  $('#dtb_join_room').on('click', () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      toastr.warning('请先连接到服务器', 'Dual Tavern Bridge');
+      toastr.warning('请先连接服务器', 'Dual Tavern Bridge');
       return;
     }
     const roomId = $('#dtb_room_code_input').val().trim().toUpperCase();
@@ -1261,74 +1294,36 @@ jQuery(async () => {
     ws.send(JSON.stringify({ type: 'join_room', payload: { roomId } }));
   });
 
-  $('#dtb_copy_room_code').on('click', function(e) {
-    e.preventDefault();
-    const roomCode = $('#dtb_room_code_display').text();
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(roomCode).then(() => {
-        toastr.success('房间码已复制', 'Dual Tavern Bridge');
-      }).catch(() => fallbackCopy(roomCode));
-    } else {
-      fallbackCopy(roomCode);
+  $('#dtb_leave_room').on('click', () => {
+    if (currentRoomId && ws) {
+      ws.send(JSON.stringify({ type: 'leave_room', payload: { roomId: currentRoomId } }));
+      currentRoomId = null;
+      partnerCharacter = null;
+      $('#dtb_room_info').hide();
+      $('#dtb_create_join_section').show();
+      updateChatUI();
     }
   });
 
-  $('#dtb_leave_room').on('click', function(e) {
-    e.preventDefault();
-    if (!currentRoomId || !ws) {
-      toastr.warning('当前未在任何房间中', 'Dual Tavern Bridge');
-      return;
-    }
-    ws.send(JSON.stringify({ type: 'leave_room', payload: { roomId: currentRoomId } }));
-    currentRoomId = null;
-    partnerCharacter = null;
-    partnerUserId = null;
-    $('#dtb_room_code_display').text('------');
-    $('#dtb_room_code_input').val('');
-    hideRoomInfo();
-    updatePartnerCharacterDisplay();
-    toastr.info('已离开房间', 'Dual Tavern Bridge');
+  $('#dtb_copy_room_code').on('click', () => {
+    const code = $('#dtb_room_code_display').text();
+    fallbackCopy(code);
   });
 
-  $('#dtb_room_code_input').on('input', function() {
-    $(this).val($(this).val().toUpperCase());
+  $('#dtb_update_my_character').on('click', () => {
+    syncCurrentCharacter();
+    toastr.success('角色信息已更新', 'Dual Tavern Bridge');
   });
 
-  $('#dtb_room_code_input').on('keypress', function(e) {
-    if (e.which === 13) {
-      e.preventDefault();
-      $('#dtb_join_room').click();
-    }
-  });
-
-  // 更新我的角色信息按钮
-$('#dtb_update_my_character').on('click', function(e) {
-  e.preventDefault();
-  
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    toastr.warning('请先连接到服务器', 'Dual Tavern Bridge');
-    return;
-  }
-  
-  if (!currentRoomId) {
-    toastr.warning('请先加入房间', 'Dual Tavern Bridge');
-    return;
-  }
-  
-  syncCurrentCharacter();
-  toastr.success('角色信息已更新并发送给对方', 'Dual Tavern Bridge');
-});
-
-  // 角色切换时自动同步
-  eventSource.on(event_types.CHAT_CHANGED, () => {
-    if (settings.enabled && settings.autoSync && ws && ws.readyState === WebSocket.OPEN && currentRoomId) {
-      syncCurrentCharacter();
-    }
+  $('#dtb_roleplay_mode').on('change', function () {
+    const settings = loadSettings();
+    settings.rolePlayMode = $(this).is(':checked');
+    saveSettings();
   });
 
   // 创建主 UI
   createMainUI();
-  
+
   console.log('✅ Dual Tavern Bridge 插件已加载');
 });
 

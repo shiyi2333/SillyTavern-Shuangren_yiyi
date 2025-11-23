@@ -408,33 +408,104 @@
 }
 
 /* ===== 主页覆盖层 UI ===== */
-.dtb-overlay {
+.dtb-chat-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
-  z-index: 1000; /* 低于角色选择弹窗 (通常是 9999+) */
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  animation: dtb-fade-in 0.3s ease-out;
-}
-
-.dtb-overlay.active {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px;
+  max-width: 95vw;
+  height: 600px;
+  max-height: 90vh;
+  background: var(--SmartThemeBlurTintColor);
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   display: flex;
+  flex-direction: column;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
 }
 
-@keyframes dtb-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.dtb-chat-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* 最小化状态 */
+.dtb-chat-overlay.minimized {
+  height: 48px;
+  overflow: hidden;
+  width: 300px;
+  top: auto;
+  bottom: 20px;
+  left: 20px;
+  transform: none;
+  opacity: 1;
+  pointer-events: all;
+  border-radius: 8px;
+}
+
+/* ===== 设置面板新样式 ===== */
+.dual-tavern-bridge-settings-container {
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--black10a);
+  margin-bottom: 10px;
+}
+
+.dtb-main-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--SmartThemeBlurTintColor);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dtb-main-settings-header:hover {
+  background: var(--black30a);
+}
+
+.dtb-main-settings-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--SmartThemeBodyColor);
+}
+
+.dtb-main-icon {
+  font-size: 20px;
+}
+
+.dtb-arrow-icon {
+  transition: transform 0.3s;
+  font-size: 12px;
+  color: var(--white70a);
+}
+
+.dtb-arrow-icon.open {
+  transform: rotate(180deg);
+}
+
+.dtb-main-settings-content {
+  padding: 16px;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s;
+  max-height: 2000px; /* 足够大以容纳内容 */
+  opacity: 1;
+}
+
+.dtb-main-settings-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding: 0 16px;
+  overflow: hidden;
 }
 
 /* ===== 主 UI 容器 ===== */
