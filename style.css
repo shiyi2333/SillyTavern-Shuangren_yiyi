@@ -87,8 +87,15 @@
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /* ===== 表单组 ===== */
@@ -306,8 +313,15 @@
 }
 
 @keyframes pulse-bg {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .dtb-waiting-spinner {
@@ -320,7 +334,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .dtb-waiting-text {
@@ -374,11 +390,11 @@
   .dtb-form-row {
     flex-direction: column;
   }
-  
+
   .dtb-button-group {
     flex-direction: column;
   }
-  
+
   .dtb-button {
     width: 100%;
   }
@@ -497,7 +513,8 @@
 .dtb-main-settings-content {
   padding: 16px;
   transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s;
-  max-height: 2000px; /* 足够大以容纳内容 */
+  max-height: 2000px;
+  /* 足够大以容纳内容 */
   opacity: 1;
 }
 
@@ -528,6 +545,7 @@
     transform: translateY(50px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -787,7 +805,8 @@
   position: fixed;
   bottom: 30px;
   right: 30px;
-  z-index: 99; /* 略低于聊天 UI */
+  z-index: 99;
+  /* 略低于聊天 UI */
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -906,369 +925,10 @@
 
   .dtb-fab.secondary {
     width: 40px;
-    height: 40px;
-    font-size: 18px;
-  }
-}
-
-/* ===== 滚动条样式（统一）===== */
-.dtb-left-panel::-webkit-scrollbar,
-.dtb-right-panel::-webkit-scrollbar,
-.dtb-detail-content::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.dtb-left-panel::-webkit-scrollbar-track,
-.dtb-right-panel::-webkit-scrollbar-track,
-.dtb-detail-content::-webkit-scrollbar-track {
-  background: var(--black30a);
-  border-radius: 4px;
-}
-
-.dtb-left-panel::-webkit-scrollbar-thumb,
-.dtb-right-panel::-webkit-scrollbar-thumb,
-.dtb-detail-content::-webkit-scrollbar-thumb {
-  background: var(--SmartThemeBorderColor);
-  border-radius: 4px;
-}
-
-.dtb-left-panel::-webkit-scrollbar-thumb:hover,
-.dtb-right-panel::-webkit-scrollbar-thumb:hover,
-.dtb-detail-content::-webkit-scrollbar-thumb:hover {
-  background: var(--SmartThemeQuoteColor);
-}
-
-/* ===== 加载动画 ===== */
-.dtb-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.dtb-loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--black50a);
-  border-top-color: var(--SmartThemeQuoteColor);
-  border-radius: 50%;
-  animation: dtb-spin 1s linear infinite;
-}
-
-@keyframes dtb-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ===== 弹窗式主 UI（覆盖聊天区域）===== */
-.dtb-chat-overlay {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 1200px;
-  height: 80vh;
-  background: var(--SmartThemeBlurTintColor);
-  border: 2px solid var(--SmartThemeBorderColor);
-  border-radius: 16px;
-  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6);
-  z-index: 100; /* 低于设置面板(1000+)和角色选择(9999+) */
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-}
-
-.dtb-chat-overlay.active {
-  display: flex;
-}
-
-.dtb-chat-overlay.minimized {
-  height: 60px;
-  width: 400px;
-  top: auto;
-  bottom: 80px;
-  left: auto;
-  right: 20px;
-  transform: none;
-}
-
-.dtb-chat-overlay.minimized .dtb-chat-body,
-.dtb-chat-overlay.minimized .dtb-chat-input-area {
-  display: none;
-}
-
-/* ===== 聊天区域头部 ===== */
-.dtb-chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--black30a);
-  border-bottom: 1px solid var(--SmartThemeBorderColor);
-  cursor: move; /* 可拖动 */
-}
-
-.dtb-chat-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dtb-chat-status-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #f44336;
-  animation: pulse-dot 2s infinite;
-}
-
-.dtb-chat-status-indicator.connected {
-  background: #4CAF50;
-  animation: none;
-}
-
-.dtb-chat-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--SmartThemeBodyColor);
-}
-
-.dtb-chat-subtitle {
-  font-size: 12px;
-  color: var(--white70a);
-  margin-left: 8px;
-}
-
-.dtb-chat-header-actions {
-  display: flex;
-  gap: 6px;
-}
-
-/* ===== 聊天主体（三栏布局）===== */
-.dtb-chat-body {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* 左侧：我的角色 */
-.dtb-chat-left {
-  width: 280px;
-  background: var(--black10a);
-  border-right: 1px solid var(--SmartThemeBorderColor);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-/* 中间：聊天区域 */
-.dtb-chat-center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: var(--SmartThemeBlurTintColor);
-}
-
-.dtb-chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dtb-message-item {
-  display: flex;
-  gap: 10px;
-  animation: dtb-message-in 0.3s ease-out;
-}
-
-@keyframes dtb-message-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dtb-message-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--black50a);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.dtb-message-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.dtb-message-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dtb-message-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--SmartThemeBodyColor);
-}
-
-.dtb-message-time {
-  font-size: 11px;
-  color: var(--white50a);
-}
-
-.dtb-message-text {
-  padding: 10px 12px;
-  background: var(--black30a);
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--SmartThemeBodyColor);
-  line-height: 1.5;
-  word-wrap: break-word;
-}
-
-.dtb-message-item.user .dtb-message-text {
-  background: var(--SmartThemeQuoteColor);
-  color: white;
-}
-
-/* 右侧：对方角色 */
-.dtb-chat-right {
-  width: 280px;
-  background: var(--black10a);
-  border-left: 1px solid var(--SmartThemeBorderColor);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-/* ===== 输入区域 ===== */
-.dtb-chat-input-area {
-  padding: 12px 16px;
-  background: var(--black30a);
-  border-top: 1px solid var(--SmartThemeBorderColor);
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-}
-
-.dtb-chat-input {
-  flex: 1;
-  min-height: 40px;
-  max-height: 120px;
-  padding: 10px 12px;
-  background: var(--black50a);
-  border: 1px solid var(--SmartThemeBorderColor);
-  border-radius: 8px;
-  color: var(--SmartThemeBodyColor);
-  font-size: 14px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.dtb-chat-input:focus {
-  outline: none;
-  border-color: var(--SmartThemeQuoteColor);
-}
-
-.dtb-chat-send-btn {
-  width: 40px;
-  height: 40px;
-  background: var(--SmartThemeQuoteColor);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.dtb-chat-send-btn:hover {
-  filter: brightness(1.1);
-  transform: scale(1.05);
-}
-
-.dtb-chat-send-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ===== 角色卡片（简化版）===== */
-.dtb-char-card-simple {
-  padding: 12px;
-  margin: 12px;
-  background: var(--black30a);
-  border: 1px solid var(--SmartThemeBorderColor);
-  border-radius: 8px;
-}
-
-.dtb-char-header-simple {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.dtb-char-avatar-simple {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  background: var(--black50a);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-}
-
-.dtb-char-name-simple {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--SmartThemeBodyColor);
-}
-
-.dtb-char-desc-simple {
-  font-size: 12px;
-  color: var(--white70a);
-  line-height: 1.4;
-  max-height: 60px;
-  overflow-y: auto;
-  margin-bottom: 10px;
-}
-
-/* 响应式 */
-@media (max-width: 1024px) {
-  .dtb-chat-left,
-  .dtb-chat-right {
-    width: 220px;
-  }
-}
-
-@media (max-width: 768px) {
-  .dtb-chat-overlay {
-    width: 100%;
     height: 100vh;
     border-radius: 0;
   }
-  
+
   .dtb-chat-left,
   .dtb-chat-right {
     display: none;

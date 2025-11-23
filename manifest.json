@@ -5,8 +5,8 @@
   "optional": [],
   "js": "index.js",
   "css": "style.css",
-  "author": "Your Name",
-  "version": "1.0.4",
+  "author": "shiyi2333",
+  "version": "1.0.5",
   "homePage": "https://github.com/shiyi2333/SillyTavern-Shuangren_yi",
   "auto_update": false,
   "minimum_client_version": "1.12.0"

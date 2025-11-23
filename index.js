@@ -869,18 +869,33 @@ function updatePartnerChatCharacter() {
 }
 
 // 使头部可拖动
+// 使头部可拖动
 function makeDraggable() {
   const overlay = document.getElementById('dtb_chat_overlay');
   const header = document.getElementById('dtb_chat_header_drag');
   let isDragging = false;
   let currentX, currentY, initialX, initialY;
+  let xOffset = 0;
+  let yOffset = 0;
 
   header.addEventListener('mousedown', (e) => {
-    if (overlay.classList.contains('minimized')) {
-      isDragging = true;
-      initialX = e.clientX - overlay.offsetLeft;
-      initialY = e.clientY - overlay.offsetTop;
+    // 允许在任何状态下拖动
+    // 计算初始偏移量，考虑到 transform 的影响
+    const rect = overlay.getBoundingClientRect();
+
+    // 如果是第一次拖动，移除 transform 并设置具体的 left/top
+    if (overlay.style.transform && overlay.style.transform.includes('translate')) {
+      overlay.style.left = rect.left + 'px';
+      overlay.style.top = rect.top + 'px';
+      overlay.style.transform = 'none';
+      overlay.style.bottom = 'auto';
+      overlay.style.right = 'auto';
     }
+
+    initialX = e.clientX - overlay.offsetLeft;
+    initialY = e.clientY - overlay.offsetTop;
+    isDragging = true;
+    header.style.cursor = 'grabbing';
   });
 
   document.addEventListener('mousemove', (e) => {
@@ -888,14 +903,21 @@ function makeDraggable() {
       e.preventDefault();
       currentX = e.clientX - initialX;
       currentY = e.clientY - initialY;
+
+      // 边界检查（可选，防止拖出屏幕）
+      // const maxX = window.innerWidth - overlay.offsetWidth;
+      // const maxY = window.innerHeight - overlay.offsetHeight;
+      // currentX = Math.min(Math.max(0, currentX), maxX);
+      // currentY = Math.min(Math.max(0, currentY), maxY);
+
       overlay.style.left = currentX + 'px';
       overlay.style.top = currentY + 'px';
-      overlay.style.transform = 'none';
     }
   });
 
   document.addEventListener('mouseup', () => {
     isDragging = false;
+    header.style.cursor = 'grab';
   });
 }
 
@@ -1223,10 +1245,17 @@ jQuery(async () => {
   `;
 
   // 插入设置面板
-  // 尝试插入到扩展设置区域，如果找不到则插入到 body
-  // 注意：这里我们直接插入 body 并通过 CSS 控制位置/显示，或者依赖 ST 的扩展加载机制
-  // 既然之前的代码是 append(settingsHtml)，我们假设它能工作
-  $('body').append(settingsHtml);
+  // 尝试插入到扩展设置区域
+  const extensionSettingsContainer = $('#extensions_settings');
+  if (extensionSettingsContainer.length) {
+    // 检查是否已经存在
+    if ($('#dual-tavern-bridge-settings-container').length === 0) {
+      extensionSettingsContainer.append(settingsHtml);
+    }
+  } else {
+    // 如果找不到扩展设置容器，回退到 body (虽然不太可能)
+    $('body').append(settingsHtml);
+  }
 
   // 绑定设置面板事件
   $('#dtb_main_settings_toggle').on('click', () => {
