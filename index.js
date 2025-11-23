@@ -462,6 +462,7 @@ function hideRoomInfo() {
 }
 
 // ===== 主 UI 覆盖层 =====
+// ===== 主 UI 覆盖层 =====
 function createMainUI() {
   // 检查主页容器是否存在
   const mainContainer = $('#sheld');
@@ -480,7 +481,7 @@ function createMainUI() {
     </div>
 
     <!-- 聊天覆盖层 -->
-    <div class="dtb-chat-overlay" id="dtb_chat_overlay" style="display: none;">
+    <div class="dtb-chat-overlay" id="dtb_chat_overlay">
       <!-- 头部 -->
       <div class="dtb-chat-header" id="dtb_chat_header_drag">
         <div class="dtb-chat-header-left">
@@ -707,7 +708,7 @@ function addChatMessage(name, text, isUser) {
   const avatar = isUser ? '👤' : '🎭';
 
   const messageHtml = `
-    <div class="dtb-message-item ${isUser ? 'user' : ''}">
+  < div class="dtb-message-item ${isUser ? 'user' : ''}" >
       <div class="dtb-message-avatar">${avatar}</div>
       <div class="dtb-message-content">
         <div class="dtb-message-header">
@@ -716,7 +717,7 @@ function addChatMessage(name, text, isUser) {
         </div>
         <div class="dtb-message-text">${text}</div>
       </div>
-    </div>
+    </div >
   `;
 
   const container = $('#dtb_chat_messages');
@@ -743,7 +744,7 @@ function updateChatUI() {
     connStatus.removeClass('disconnected').addClass('connected').html('<span class="dtb-status-dot"></span>已连接');
 
     if (currentRoomId) {
-      roomInfo.text(`房间: ${currentRoomId}`);
+      roomInfo.text(`房间: ${currentRoomId} `);
       sendBtn.prop('disabled', false);
       $('#dtb_chat_room_code_display').show();
       $('#dtb_chat_current_room').text(currentRoomId);
@@ -776,23 +777,23 @@ function updateMyChatCharacter() {
 
   if (characterId === undefined || !characters[characterId]) {
     container.html(`
-      <div class="dtb-empty-state">
+  < div class="dtb-empty-state" >
         <div class="dtb-empty-icon">👤</div>
         <div class="dtb-empty-text">未选择角色</div>
-      </div>
-    `);
+      </div >
+  `);
     return;
   }
 
   const character = characters[characterId];
   container.html(`
-    <div class="dtb-char-card-simple">
+  < div class="dtb-char-card-simple" >
       <div class="dtb-char-header-simple">
         <div class="dtb-char-avatar-simple">👤</div>
         <div class="dtb-char-name-simple">${character.name}</div>
       </div>
       <div class="dtb-char-desc-simple">${character.data?.description || character.description || '暂无描述'}</div>
-    </div>
+    </div >
   `);
 }
 
@@ -802,22 +803,22 @@ function updatePartnerChatCharacter() {
 
   if (!partnerCharacter) {
     container.html(`
-      <div class="dtb-empty-state">
+  < div class="dtb-empty-state" >
         <div class="dtb-empty-icon">👥</div>
         <div class="dtb-empty-text">等待对方</div>
-      </div>
-    `);
+      </div >
+  `);
     return;
   }
 
   container.html(`
-    <div class="dtb-char-card-simple">
+  < div class="dtb-char-card-simple" >
       <div class="dtb-char-header-simple">
         <div class="dtb-char-avatar-simple">🎭</div>
         <div class="dtb-char-name-simple">${partnerCharacter.name}</div>
       </div>
       <div class="dtb-char-desc-simple">${partnerCharacter.description || '暂无描述'}</div>
-    </div>
+    </div >
   `);
 }
 
@@ -930,11 +931,11 @@ function updateMainUIMyCharacter() {
 
   if (characterId === undefined || !characters[characterId]) {
     container.html(`
-      <div class="dtb-empty-state">
+  < div class="dtb-empty-state" >
         <div class="dtb-empty-icon">👤</div>
         <div class="dtb-empty-text">未选择角色</div>
-      </div>
-    `);
+      </div >
+  `);
     return;
   }
 
@@ -946,7 +947,7 @@ function updateMainUIMyCharacter() {
   };
 
   container.html(`
-    <div class="dtb-character-card-large">
+  < div class="dtb-character-card-large" >
       <div class="dtb-character-header">
         <div class="dtb-character-avatar-large">👤</div>
         <div class="dtb-character-header-info">
@@ -967,7 +968,7 @@ function updateMainUIMyCharacter() {
           <div class="dtb-detail-content">${charData.personality || ''}</div>
         </div>
       </div>
-    </div>
+    </div >
   `);
 }
 
@@ -976,17 +977,17 @@ function updateMainUIPartnerCharacter() {
 
   if (!partnerCharacter) {
     container.html(`
-      <div class="dtb-empty-state">
+  < div class="dtb-empty-state" >
         <div class="dtb-empty-icon">👥</div>
         <div class="dtb-empty-text">等待对方加入</div>
         <div class="dtb-empty-hint">对方加入房间后，角色信息会显示在这里</div>
-      </div>
-    `);
+      </div >
+  `);
     return;
   }
 
   container.html(`
-    <div class="dtb-character-card-large">
+  < div class="dtb-character-card-large" >
       <div class="dtb-character-header">
         <div class="dtb-character-avatar-large">🎭</div>
         <div class="dtb-character-header-info">
@@ -1011,7 +1012,7 @@ function updateMainUIPartnerCharacter() {
           <div class="dtb-detail-content">${partnerCharacter.scenario || ''}</div>
         </div>
       </div>
-    </div>
+    </div >
   `);
 
   if (!mainUIVisible) {
@@ -1043,7 +1044,7 @@ function fallbackCopy(text) {
 jQuery(async () => {
   // 创建设置面板
   const settingsHtml = `
-    <div class="dual-tavern-bridge-settings-container">
+  < div class="dual-tavern-bridge-settings-container" >
       <div class="dtb-main-settings-header" id="dtb_main_settings_toggle">
         <div class="dtb-main-settings-title">
           <span class="dtb-main-icon">🎭</span>
@@ -1194,7 +1195,7 @@ jQuery(async () => {
 
         </div>
       </div>
-    </div>
+    </div >
   `;
 
   // 插入设置面板
@@ -1223,7 +1224,7 @@ jQuery(async () => {
 
   $('.dtb-panel-header').on('click', function () {
     const panelId = $(this).data('panel');
-    const content = $(`#${panelId}_content`);
+    const content = $(`#${panelId} _content`);
     const icon = $(this).find('.dtb-panel-icon');
 
     content.toggleClass('collapsed');
