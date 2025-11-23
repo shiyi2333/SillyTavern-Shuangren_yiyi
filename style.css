@@ -418,61 +418,6 @@
   border-radius: 3px;
 }
 
-.dtb-panel-content::-webkit-scrollbar-thumb:hover,
-.dtb-message-preview::-webkit-scrollbar-thumb:hover {
-  background: var(--SmartThemeQuoteColor);
-}
-
-/* ===== 主页覆盖层 UI ===== */
-.dtb-chat-overlay {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 900px;
-  max-width: 95vw;
-  height: 600px;
-  max-height: 90vh;
-  background: var(--SmartThemeBlurTintColor);
-  border: 1px solid var(--SmartThemeBorderColor);
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  z-index: 2000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s, transform 0.3s;
-}
-
-.dtb-chat-overlay.active {
-  opacity: 1;
-  pointer-events: all;
-}
-
-/* 最小化状态 */
-.dtb-chat-overlay.minimized {
-  height: 48px;
-  overflow: hidden;
-  width: 300px;
-  top: auto;
-  bottom: 20px;
-  left: 20px;
-  transform: none;
-  opacity: 1;
-  pointer-events: all;
-  border-radius: 8px;
-}
-
-/* ===== 设置面板新样式 ===== */
-.dual-tavern-bridge-settings-container {
-  border: 1px solid var(--SmartThemeBorderColor);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--black10a);
-  margin-bottom: 10px;
-}
-
 .dtb-main-settings-header {
   display: flex;
   align-items: center;

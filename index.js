@@ -249,28 +249,6 @@ function syncCurrentCharacter() {
   updateMainUIMyCharacter();
 }
 
-// ===== 获取用户人设 =====
-function getUserPersona() {
-  // 尝试获取 ST 的用户设置
-  // 注意：这里假设 SillyTavern 暴露了 user_name 和 user_description 或者在 context 中
-  // 如果没有直接暴露，可能需要从 DOM 或其他全局变量获取
-  const context = SillyTavern.getContext();
-
-  // 尝试从全局变量获取（根据 ST 版本可能不同）
-  let description = '';
-  if (typeof SillyTavern.userSettings !== 'undefined' && SillyTavern.userSettings.user_description) {
-    description = SillyTavern.userSettings.user_description;
-  } else if (context.user_description) {
-    description = context.user_description;
-  }
-
-  return {
-    name: context.name || 'User',
-    description: description || ''
-  };
-}
-
-// ===== 消息拦截和处理 =====
 eventSource.on(event_types.MESSAGE_SENT, async (messageId) => {
   const settings = loadSettings();
 
@@ -524,31 +502,6 @@ function createMainUI() {
         <!-- 左侧：我的角色 -->
         <div class="dtb-chat-left">
           <div class="dtb-section">
-            <div class="dtb-section-title">连接 & 房间</div>
-            <div style="padding: 0 12px;">
-              <div class="dtb-connection-card" style="margin-bottom: 12px;">
-                <div class="dtb-connection-status">
-                  <span style="font-size: 12px;">服务器</span>
-                  <span class="dtb-status-badge disconnected" id="dtb_chat_conn_status">
-                    <span class="dtb-status-dot"></span>
-                    未连接
-                  </span>
-                </div>
-              </div>
-              
-              <button id="dtb_chat_create_room" class="dtb-button primary" style="width: 100%; margin-bottom: 8px;">创建房间</button>
-              <div class="dtb-form-row">
-                <input type="text" id="dtb_chat_room_input" class="dtb-input" placeholder="房间码" maxlength="6" />
-                <button id="dtb_chat_join_room" class="dtb-button">加入</button>
-              </div>
-              <div id="dtb_chat_room_code_display" style="display: none; margin-top: 8px;">
-                <div style="padding: 8px; background: var(--black50a); border-radius: 6px; text-align: center; font-family: monospace; font-size: 18px; font-weight: bold; color: var(--SmartThemeQuoteColor); margin-bottom: 8px;" id="dtb_chat_current_room">------</div>
-                <button id="dtb_chat_leave_room" class="dtb-button danger" style="width: 100%;">离开房间</button>
-              </div>
-            </div>
-          </div>
-          
-          <div class="dtb-section">
             <div class="dtb-section-title">我的角色</div>
             <div id="dtb_my_char_display">
               <div class="dtb-empty-state">
@@ -575,7 +528,7 @@ function createMainUI() {
           <!-- 输入区域 -->
           <div class="dtb-chat-input-area">
             <textarea id="dtb_chat_input" class="dtb-chat-input" placeholder="输入消息..." rows="1"></textarea>
-            <button id="dtb_chat_send" class="dtb-chat-send-btn" disabled>📤</button>
+            <button id="dtb_chat_send" class="dtb-chat-send-btn" disabled>✈️</button>
           </div>
         </div>
 
